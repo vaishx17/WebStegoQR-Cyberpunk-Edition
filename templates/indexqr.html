@@ -1,0 +1,223 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebStegoQR - Cyberpunk Edition</title>
+    <script src="https://unpkg.com/jsqr"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Cyberpunk Theme */
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: radial-gradient(circle, #0d0d0d 40%, #001f3f);
+            color: #00ffff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #00ffff;
+            padding: 10px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 22px;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ccff;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #003366;
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            padding: 8px;
+            width: 100%;
+            margin: 5px 0;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #00ffff;
+            color: #003366;
+            box-shadow: 0 0 10px #00ffff, 0 0 20px #00ccff;
+        }
+        input {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 2px solid #00ffff;
+            background: #001f3f;
+            color: #00ffff;
+            font-size: 14px;
+            width: 100%;
+        }
+                /* Apply box-sizing to all elements */
+        * {
+            box-sizing: border-box;
+        }
+
+        /* Ensure uniform height for buttons and input fields */
+        button, input {
+            height: 40px; /* Set a fixed height */
+        }
+
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 5px; /* Reduced from 15px */
+        }
+        .qr-container img {
+            max-width: 90px;
+            background: white;
+            padding: 5px;
+            border-radius: 10px;
+            display: none;
+            margin-top: 5px;
+        }
+        .scanned-data {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            text-align: center;
+            max-width: 90%;
+            margin: 10px auto;
+            padding: 5px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebStegoQR: Cyberpunk Edition</h1>
+        <!-- Selection Menu -->
+        <div id="selection-menu">
+            <button onclick="showGenerate()">Generate QR Code</button>
+            <button onclick="showDecrypt()">Decrypt QR Code</button>
+        </div>
+        <!-- Generate QR Section -->
+        <div id="generate-section" class="hidden">
+            <input type="text" id="data" placeholder="Enter data">
+            <input type="password" id="encryptionKey" placeholder="Enter encryption key">
+            <button onclick="generateQR()">Generate QR Code</button>
+            <div class="qr-container">
+                <img id="qrImage" src="" alt="Generated QR Code">
+            </div>
+            <button onclick="goBack()">Back</button>
+        </div>
+        <!-- Decrypt QR Section -->
+        <div id="decrypt-section" class="hidden">
+            <input type="file" accept="image/*" id="qrInput">
+            <input type="password" id="decryptionKey" placeholder="Enter decryption key">
+            <button onclick="scanQR()">Scan QR</button>
+            <p id="scanned-data" class="scanned-data"></p>
+            <button onclick="decryptQR()" id="decrypt-btn" class="hidden">Decrypt</button>
+            <p id="decrypted-text"></p>
+            <button onclick="goBack()">Back</button>
+        </div>
+    </div>
+    
+    <script>
+        function showGenerate() {
+            document.getElementById("generate-section").classList.remove("hidden");
+            document.getElementById("decrypt-section").classList.add("hidden");
+            document.getElementById("selection-menu").classList.add("hidden");
+        }
+        function showDecrypt() {
+            document.getElementById("decrypt-section").classList.remove("hidden");
+            document.getElementById("generate-section").classList.add("hidden");
+            document.getElementById("selection-menu").classList.add("hidden");
+        }
+        function goBack() {
+            document.getElementById("selection-menu").classList.remove("hidden");
+            document.getElementById("generate-section").classList.add("hidden");
+            document.getElementById("decrypt-section").classList.add("hidden");
+        }
+        function generateQR() {
+            let data = document.getElementById('data').value.trim();
+            let key = document.getElementById('encryptionKey').value.trim();
+            if (!data || !key) {
+                alert("Enter both data and an encryption key before generating a QR code.");
+                return;
+            }
+            fetch('/encrypt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ data, key })
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                let qrImage = document.getElementById('qrImage');
+                qrImage.src = URL.createObjectURL(blob);
+                qrImage.style.display = 'block';
+            })
+            .catch(error => alert("Error generating QR Code."));
+        }
+        function scanQR() {
+            let input = document.getElementById('qrInput');
+            if (input.files.length === 0) {
+                alert("Please select an image file.");
+                return;
+            }
+            let file = input.files[0];
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let image = new Image();
+                image.src = e.target.result;
+                
+                image.onload = function() {
+                    let canvas = document.createElement("canvas");
+                    canvas.width = image.width;
+                    canvas.height = image.height;
+                    let ctx = canvas.getContext("2d");
+                    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    let qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+                    
+                    if (qrCode) {
+                        document.getElementById('scanned-data').innerText = "Scanned Data: " + qrCode.data;
+                        document.getElementById("decrypt-btn").classList.remove("hidden");
+                    } else {
+                        alert("No QR code detected.");
+                    }
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+        function decryptQR() {
+            let encryptedData = document.getElementById('scanned-data').innerText.replace("Scanned Data: ", "");
+            let key = document.getElementById('decryptionKey').value.trim();
+            if (!encryptedData || !key) {
+                alert("Enter both the scanned data and the decryption key.");
+                return;
+            }
+            fetch('/decrypt_qr', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ encrypted_data: encryptedData, key })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("decrypted-text").innerText = data.decrypted_text ? "Decrypted Text: " + data.decrypted_text : "Error: " + data.error;
+            })
+            .catch(error => alert("Error decrypting QR."));
+        }
+    </script>
+</body>
+</html>
