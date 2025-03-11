@@ -175,12 +175,19 @@
             .catch(error => alert("Error generating QR Code."));
         }
         function validateKeyLength(input) {
-            if (input.value.length !== 8) {
-                input.style.borderColor = "red";
+            let length = input.value.length;  // Get input length
+            if (length < 8) {
+                input.style.border = "2px solid red"; // Red when < 8 characters
+                input.style.boxShadow = "0 0 10px red"; // Add glow effect
+            } else if (length === 8) {
+                input.style.border = "2px solid lime"; // Green when exactly 8
+                input.style.boxShadow = "0 0 10px lime"; // Add glow effect
             } else {
-                input.style.borderColor = "#00ffff";
+                input.style.border = "2px solid red"; // Red if > 8 characters
+                input.style.boxShadow = "0 0 10px red";
             }
         }
+
 
         function scanQR() {
             let input = document.getElementById('qrInput');
